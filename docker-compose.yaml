@@ -1,0 +1,79 @@
+version: '3'
+
+#services:
+#  web:
+#    build: .
+#    ports:
+#      - "8000:8000"
+
+#  db:
+#    image: postgres:latest
+#    environment:
+#      POSTGRES_DB: game_db
+#      POSTGRES_USER: user
+#      POSTGRES_PASSWORD: password
+# Должно быть без - version: "3.9"
+
+services:
+  app:
+    container_name: game_4_color
+    build:
+      context: .
+      args:
+        ENV: "local"
+    command:
+      - /bin/bash
+      - -c
+      - |
+        ./cmd-local.sh
+
+#        ./wait-postgres-db.sh
+#        # python -m pytest -m "unit and not long" -s . -vv --color=yes --durations=15 --setup-show
+#        # python3 -m pytest -s -vv . --color=yes --cov=. --cov-report=term-missing
+#        # python -m pytest -s . -vv --color=yes --durations=50 --setup-show
+#        # python3 -m pytest -s -vv . --color=yes --cov=. --cov-report=term-missing
+#        python3 -m pytest -m "unit and not long" -s -vv . --color=yes --cov=. --cov-report=term-missing --durations=50
+
+    ports:
+      - "8080:8081"
+    env_file:
+      - .env
+    networks:
+      game-local:
+        ipv4_address: 219.21.0.7
+    depends_on:
+      - postgres-db
+
+  postgres-db:
+    container_name: db
+    image: postgres:16.1-alpine3.18
+    command: "-c logging_collector=off"
+    logging:
+      driver: none
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PGDATA: /data/postgres
+    volumes:
+      - db:/data/postgres
+      - ./migrations/:/docker-entrypoint-initdb.d/
+#      - ./seeds/:/docker-entrypoint-initdb.d/seeds/
+    ports:
+      - "15432:5432"
+    restart: unless-stopped
+    networks:
+      game-local:
+        ipv4_address: 219.21.0.54
+
+volumes:
+  db:
+    driver: local
+
+networks:
+  game-local:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 219.21.0.0/16
